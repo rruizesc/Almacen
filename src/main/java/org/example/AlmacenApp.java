@@ -56,13 +56,14 @@ public class AlmacenApp {
     }
     private static void buscarArticulo() {
         MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("sample_mflix");
+        MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
-        IO.print("Que vas a buscar");
-        Integer a = IO.readInt();
+        IO.print("¿Qué tipo de artículo quieres buscar?");
+        String tipo = IO.readString();
+
         Bson projectionFields = Projections.fields(
                 Projections.excludeId());
-        MongoCursor<Document> cursor = collection.find(lt("cantidad", a))
+        MongoCursor<Document> cursor = collection.find(Filters.eq("tipo", tipo))
                 .projection(projectionFields)
                 .sort(Sorts.descending("tipo")).iterator();
         try {
