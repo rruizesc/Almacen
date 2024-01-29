@@ -11,10 +11,7 @@ import main.java.org.example.io.IO;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.lt;
@@ -82,62 +79,132 @@ public class AlmacenApp {
     }
 
     private static void modArticulo() {
+        MongoClient mongoClient = MongoDB.getClient();
+        MongoDatabase database = mongoClient.getDatabase("almacen");
+        MongoCollection<Document> collection = database.getCollection("articulos");
 
-    }
+        IO.print("¿Qué tipo de artículo quieres modificar?");
+        String tipo = IO.readString();
 
-        private static void addArticulo () {
-            MongoClient mongoClient = MongoDB.getClient();
-            MongoDatabase database = mongoClient.getDatabase("almacen");
-            MongoCollection<Document> collection = database.getCollection("articulos");
+        // Obtener los artículos del tipo seleccionado
+        Bson filter = Filters.eq("tipo", tipo);
+        Bson projectionFields = Projections.excludeId();
+        MongoCursor<Document> cursor = collection.find(filter)
+                .projection(projectionFields)
+                .sort(Sorts.descending("tipo")).iterator();
 
-            // Solicitar al usuario la información básica del nuevo artículo
-            IO.print("Ingrese el tipo del artículo: ");
-            String tipo = IO.readString();
+        // Almacenar los artículos en una lista
+        List<Document> articulos = new ArrayList<>();
+        int opcionArticulo = 1;
 
-            IO.print("Ingrese la marca del artículo: ");
-            String marca = IO.readString();
+        try {
+            while (cursor.hasNext()) {
+                Document articulo = cursor.next();
+                IO.print("Opción " + opcionArticulo + ": ");
+                // Mostrar los detalles del artículo directamente aquí
+                for (Map.Entry<String, Object> entry : articulo.entrySet()) {
+                    IO.print(entry.getKey() + ": " + entry.getValue() + " | ");
+                }
+                System.out.println();  // Salto de línea después de mostrar los detalles
+                opcionArticulo++;
 
-            IO.print("Ingrese la cantidad del artículo: ");
-            int cantidad = IO.readInt();
+                // Almacenar el artículo en la lista
+                articulos.add(articulo);
+            }
+        } finally {
+            cursor.close();
+        }
 
-            // Crear un documento con la información básica proporcionada por el usuario
-            Document nuevoArticulo = new Document()
-                    .append("tipo", tipo)
-                    .append("marca", marca)
-                    .append("cantidad", cantidad);
+        IO.println("Seleccione el artículo que desea modificar ingresando el número correspondiente:");
+        int opcionSeleccionada = IO.readInt();
 
-            // Preguntar al usuario si desea agregar más opciones
-            IO.print("¿Desea agregar más opciones? (si/no): ");
-            String agregarOpciones = IO.readString();
+        // Validar la opción seleccionada
+        if (opcionSeleccionada >= 1 && opcionSeleccionada <= opcionArticulo - 1) {
+            // Obtener el artículo seleccionado de la lista
+            Document articuloSeleccionado = articulos.get(opcionSeleccionada - 1);
 
-            // Si la respuesta es afirmativa, solicitar la cantidad de opciones adicionales
-            if ("si".equalsIgnoreCase(agregarOpciones)) {
-                IO.print("¿Cuántas opciones adicionales desea agregar?: ");
-                int numOpciones = IO.readInt();
+            IO.print("Detalles del artículo a modificar: ");
+            // Mostrar los detalles del artículo directamente aquí
+            for (Map.Entry<String, Object> entry : articuloSeleccionado.entrySet()) {
+                IO.print(entry.getKey() + ": " + entry.getValue() + " | ");
+            }
+            System.out.println();  // Salto de línea después de mostrar los detalles
 
-                // Iterar sobre las opciones y solicitar información al usuario
-                for (int i = 0; i < numOpciones; i++) {
-                    IO.print("Ingrese el nombre de la opción " + (i + 1) + ": ");
-                    String nombreOpcion = IO.readString();
+            // Iterar sobre las variables y permitir al usuario modificar cada una
+            for (Map.Entry<String, Object> entry : articuloSeleccionado.entrySet()) {
+                IO.print("Introduce el nuevo valor para '" + entry.getKey() + "' (o deja en blanco para mantener el valor actual): ");
+                String nuevoValor = IO.readString();
 
-                    IO.print("Ingrese el valor de la opción " + (i + 1) + ": ");
-                    String valorOpcion = IO.readString();
-
-                    // Agregar la opción al documento del artículo
-                    nuevoArticulo.append(nombreOpcion, valorOpcion);
+                if (!nuevoValor.isEmpty()) {
+                    // Actualizar el valor en el documento
+                    articuloSeleccionado.put(entry.getKey(), nuevoValor);
                 }
             }
 
-            // Insertar el nuevo artículo en la colección
-            collection.insertOne(nuevoArticulo);
+            // Actualizar el documento en la base de datos
+            collection.replaceOne(Filters.eq("_id", articuloSeleccionado.getObjectId("_id")), articuloSeleccionado);
 
-            System.out.println("Artículo agregado correctamente.");
-        }
-
-
-        private static void deleteArticulo () {
+            IO.println("Artículo modificado con éxito.");
+        } else {
+            IO.println("Opción no válida.");
         }
     }
+
+
+
+    private static void addArticulo() {
+        MongoClient mongoClient = MongoDB.getClient();
+        MongoDatabase database = mongoClient.getDatabase("almacen");
+        MongoCollection<Document> collection = database.getCollection("articulos");
+
+        // Solicitar al usuario la información básica del nuevo artículo
+        IO.print("Ingrese el tipo del artículo: ");
+        String tipo = IO.readString();
+
+        IO.print("Ingrese la marca del artículo: ");
+        String marca = IO.readString();
+
+        IO.print("Ingrese la cantidad del artículo: ");
+        int cantidad = IO.readInt();
+
+        // Crear un documento con la información básica proporcionada por el usuario
+        Document nuevoArticulo = new Document()
+                .append("tipo", tipo)
+                .append("marca", marca)
+                .append("cantidad", cantidad);
+
+        // Preguntar al usuario si desea agregar más opciones
+        IO.print("¿Desea agregar más opciones? (si/no): ");
+        String agregarOpciones = IO.readString();
+
+        // Si la respuesta es afirmativa, solicitar la cantidad de opciones adicionales
+        if ("si".equalsIgnoreCase(agregarOpciones)) {
+            IO.print("¿Cuántas opciones adicionales desea agregar?: ");
+            int numOpciones = IO.readInt();
+
+            // Iterar sobre las opciones y solicitar información al usuario
+            for (int i = 0; i < numOpciones; i++) {
+                IO.print("Ingrese el nombre de la opción " + (i + 1) + ": ");
+                String nombreOpcion = IO.readString();
+
+                IO.print("Ingrese el valor de la opción " + (i + 1) + ": ");
+                String valorOpcion = IO.readString();
+
+                // Agregar la opción al documento del artículo
+                nuevoArticulo.append(nombreOpcion, valorOpcion);
+            }
+        }
+
+        // Insertar el nuevo artículo en la colección
+        collection.insertOne(nuevoArticulo);
+
+        System.out.println("Artículo agregado correctamente.");
+    }
+
+
+    private static void deleteArticulo() {
+    }
+}
 
 
 
