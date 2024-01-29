@@ -11,7 +11,11 @@ import main.java.org.example.io.IO;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.lt;
 
@@ -54,6 +58,7 @@ public class AlmacenApp {
             }
         }
     }
+
     private static void buscarArticulo() {
         MongoClient mongoClient = MongoDB.getClient();
         MongoDatabase database = mongoClient.getDatabase("almacen");
@@ -67,7 +72,7 @@ public class AlmacenApp {
                 .projection(projectionFields)
                 .sort(Sorts.descending("tipo")).iterator();
         try {
-            while(cursor.hasNext()) {
+            while (cursor.hasNext()) {
                 System.out.println(cursor.next().toJson());
             }
         } finally {
@@ -80,43 +85,59 @@ public class AlmacenApp {
 
     }
 
-    private static void addArticulo() {
+        private static void addArticulo () {
+            MongoClient mongoClient = MongoDB.getClient();
+            MongoDatabase database = mongoClient.getDatabase("almacen");
+            MongoCollection<Document> collection = database.getCollection("articulos");
 
-    }
+            // Solicitar al usuario la información básica del nuevo artículo
+            IO.print("Ingrese el tipo del artículo: ");
+            String tipo = IO.readString();
 
-    private static void deleteArticulo() {
+            IO.print("Ingrese la marca del artículo: ");
+            String marca = IO.readString();
+
+            IO.print("Ingrese la cantidad del artículo: ");
+            int cantidad = IO.readInt();
+
+            // Crear un documento con la información básica proporcionada por el usuario
+            Document nuevoArticulo = new Document()
+                    .append("tipo", tipo)
+                    .append("marca", marca)
+                    .append("cantidad", cantidad);
+
+            // Preguntar al usuario si desea agregar más opciones
+            IO.print("¿Desea agregar más opciones? (si/no): ");
+            String agregarOpciones = IO.readString();
+
+            // Si la respuesta es afirmativa, solicitar la cantidad de opciones adicionales
+            if ("si".equalsIgnoreCase(agregarOpciones)) {
+                IO.print("¿Cuántas opciones adicionales desea agregar?: ");
+                int numOpciones = IO.readInt();
+
+                // Iterar sobre las opciones y solicitar información al usuario
+                for (int i = 0; i < numOpciones; i++) {
+                    IO.print("Ingrese el nombre de la opción " + (i + 1) + ": ");
+                    String nombreOpcion = IO.readString();
+
+                    IO.print("Ingrese el valor de la opción " + (i + 1) + ": ");
+                    String valorOpcion = IO.readString();
+
+                    // Agregar la opción al documento del artículo
+                    nuevoArticulo.append(nombreOpcion, valorOpcion);
+                }
+            }
+
+            // Insertar el nuevo artículo en la colección
+            collection.insertOne(nuevoArticulo);
+
+            System.out.println("Artículo agregado correctamente.");
+        }
+
+
+        private static void deleteArticulo () {
+        }
     }
-//        // Ejemplo: Crear un usuario
-//        Usuario usuario = new Usuario();
-//        usuario.setUsername("nombreUsuario");
-//        usuario.setPassword("contrasenaSegura");
-//
-//        // Insertar usuario en la colección
-//        Document usuarioDoc = new Document("username", usuario.getUsername())
-//                .append("password", usuario.getPassword());
-//        usuarioCollection.insertOne(usuarioDoc);
-//
-//        // Ejemplo: Crear un artículo
-//        Articulo articulo = new Articulo();
-//        articulo.setNombre("Articulo1");
-//        articulo.setCantidad(10);
-//
-//        // Insertar artículo en la colección
-//        Document articuloDoc = new Document("nombre", articulo.getNombre())
-//                .append("cantidad", articulo.getCantidad());
-//        articuloCollection.insertOne(articuloDoc);
-//
-//        // Imprimir usuarios y artículos en la consola (puedes adaptar esto a tu lógica real)
-//        System.out.println("Usuarios en la base de datos:");
-//        usuarioCollection.find().forEach(document -> {
-//            System.out.println(document.toJson());
-//        });
-//
-//        System.out.println("\nArtículos en el inventario:");
-//        articuloCollection.find().forEach(document -> {
-//            System.out.println(document.toJson());
-//        });
-}
 
 
 
