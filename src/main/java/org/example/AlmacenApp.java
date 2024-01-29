@@ -7,9 +7,11 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.result.DeleteResult;
 import main.java.org.example.io.IO;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -204,7 +206,7 @@ public class AlmacenApp {
         MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
 
-        IO.print("¿Qué tipo de artículo quieres modificar?");
+        IO.print("¿Qué tipo de artículo quieres eliminar?");
         String tipo = IO.readString();
 
         // Obtener los artículos del tipo seleccionado
@@ -233,6 +235,33 @@ public class AlmacenApp {
             }
         } finally {
             cursor.close();
+        }
+        // Solicitar al usuario que elija un artículo para eliminar
+        int opcionEliminar = -1;
+        while (opcionEliminar < 1 || opcionEliminar > opcionArticulo - 1) {
+            IO.print("Seleccione el número del artículo que desea eliminar (1-" + (opcionArticulo - 1) + "): ");
+            opcionEliminar = IO.readInt();
+        }
+
+        // Obtener el artículo seleccionado
+        Document articuloEliminar = articulos.get(opcionEliminar - 1);
+
+        // Obtener el _id del artículo seleccionado
+        ObjectId idArticuloEliminar = articuloEliminar.getObjectId("_id");
+
+        // Construir el filtro para eliminar el artículo
+        Bson filtroEliminar = Filters.eq("_id", idArticuloEliminar);
+
+        // Eliminar el artículo de la base de datos
+        DeleteResult deleteResult = collection.deleteOne(filtroEliminar);
+
+        // Verificar si se eliminó con éxito
+        if (deleteResult.getDeletedCount() > 0) {
+            IO.print("Artículo eliminado con éxito.");
+            System.out.println();
+        } else {
+            IO.print("No se pudo eliminar el artículo. Verifique la existencia del artículo o inténtelo nuevamente.");
+            System.out.println();
         }
     }
 }
