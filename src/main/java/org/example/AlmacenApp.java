@@ -88,9 +88,8 @@ public class AlmacenApp {
 
         // Obtener los artículos del tipo seleccionado
         Bson filter = Filters.eq("tipo", tipo);
-        Bson projectionFields = Projections.excludeId();
+
         MongoCursor<Document> cursor = collection.find(filter)
-                .projection(projectionFields)
                 .sort(Sorts.descending("tipo")).iterator();
 
         // Almacenar los artículos en una lista
@@ -143,14 +142,12 @@ public class AlmacenApp {
 
             // Actualizar el documento en la base de datos
             collection.replaceOne(Filters.eq("_id", articuloSeleccionado.getObjectId("_id")), articuloSeleccionado);
-
+            mongoClient.close();
             IO.println("Artículo modificado con éxito.");
         } else {
             IO.println("Opción no válida.");
         }
     }
-
-
 
     private static void addArticulo() {
         MongoClient mongoClient = MongoDB.getClient();
@@ -203,6 +200,40 @@ public class AlmacenApp {
 
 
     private static void deleteArticulo() {
+        MongoClient mongoClient = MongoDB.getClient();
+        MongoDatabase database = mongoClient.getDatabase("almacen");
+        MongoCollection<Document> collection = database.getCollection("articulos");
+
+        IO.print("¿Qué tipo de artículo quieres modificar?");
+        String tipo = IO.readString();
+
+        // Obtener los artículos del tipo seleccionado
+        Bson filter = Filters.eq("tipo", tipo);
+
+        MongoCursor<Document> cursor = collection.find(filter)
+                .sort(Sorts.descending("tipo")).iterator();
+
+        // Almacenar los artículos en una lista
+        List<Document> articulos = new ArrayList<>();
+        int opcionArticulo = 1;
+
+        try {
+            while (cursor.hasNext()) {
+                Document articulo = cursor.next();
+                IO.print("Opción " + opcionArticulo + ": ");
+                // Mostrar los detalles del artículo directamente aquí
+                for (Map.Entry<String, Object> entry : articulo.entrySet()) {
+                    IO.print(entry.getKey() + ": " + entry.getValue() + " | ");
+                }
+                System.out.println();  // Salto de línea después de mostrar los detalles
+                opcionArticulo++;
+
+                // Almacenar el artículo en la lista
+                articulos.add(articulo);
+            }
+        } finally {
+            cursor.close();
+        }
     }
 }
 
