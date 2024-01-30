@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="apache.logging.log4j.mongodb3" type="repository">
+    <properties maven-id="org.apache.logging.log4j:log4j-mongodb3:2.17.2" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-mongodb3/2.17.2/log4j-mongodb3-2.17.2.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-core/2.17.2/log4j-core-2.17.2.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-api/2.17.2/log4j-api-2.17.2.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/mongodb/mongodb-driver/3.12.10/mongodb-driver-3.12.10.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/mongodb/mongodb-driver-core/3.12.10/mongodb-driver-core-3.12.10.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/mongodb/bson/3.12.10/bson-3.12.10.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

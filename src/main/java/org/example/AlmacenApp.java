@@ -13,10 +13,9 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static com.mongodb.client.model.Filters.lt;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class AlmacenApp {
 
@@ -67,17 +66,13 @@ public class AlmacenApp {
 
         Bson projectionFields = Projections.fields(
                 Projections.excludeId());
-        MongoCursor<Document> cursor = collection.find(Filters.eq("tipo", tipo))
+        try (MongoCursor<Document> cursor = collection.find(Filters.eq("tipo", tipo))
                 .projection(projectionFields)
-                .sort(Sorts.descending("tipo")).iterator();
-        try {
+                .sort(Sorts.descending("tipo")).iterator()) {
             while (cursor.hasNext()) {
                 System.out.println(cursor.next().toJson());
             }
-        } finally {
-            cursor.close();
         }
-
     }
 
     private static void modArticulo() {
@@ -85,14 +80,25 @@ public class AlmacenApp {
         MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
 
-        IO.print("¿Qué tipo de artículo quieres modificar?");
-        String tipo = IO.readString();
+        IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
+        String userInput = IO.readString();
 
-        // Obtener los artículos del tipo seleccionado
-        Bson filter = Filters.eq("tipo", tipo);
+        // Dividir la entrada del usuario en nombre de variable y valor
+        String[] parts = userInput.split(":");
+        String variable = parts[0].trim();
+        String valor = parts[1].trim().toString();
+
+        // Crear un filtro dinámico
+        Bson filter = Filters.eq(variable, valor);
 
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
+
+        if(!cursor.hasNext()){
+            IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
+            mongoClient.close();
+            return;
+        }
 
         // Almacenar los artículos en una lista
         List<Document> articulos = new ArrayList<>();
@@ -101,11 +107,8 @@ public class AlmacenApp {
         try {
             while (cursor.hasNext()) {
                 Document articulo = cursor.next();
-                IO.print("Opción " + opcionArticulo + ": ");
-                // Mostrar los detalles del artículo directamente aquí
-                for (Map.Entry<String, Object> entry : articulo.entrySet()) {
-                    IO.print(entry.getKey() + ": " + entry.getValue() + " | ");
-                }
+                IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
+
                 System.out.println();  // Salto de línea después de mostrar los detalles
                 opcionArticulo++;
 
