@@ -61,19 +61,35 @@ public class AlmacenApp {
         MongoClient mongoClient = MongoDB.getClient();
         MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
-        IO.print("¿Qué tipo de artículo quieres buscar?");
-        String tipo = IO.readString();
+
+        IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
+        String userInput = IO.readString();
+
+        // Dividir la entrada del usuario en nombre de variable y valor
+        String[] parts = userInput.split(":");
+
+        // Verificar si hay suficientes elementos en el array
+        if (parts.length % 2 != 0) {
+            IO.println("Entrada inválida. Debes proporcionar pares de nombre de variable y valor.");
+            return;
+        }
+
+        String variable = parts[0].trim();
+        String valor = parts[1].trim().toString();
 
         Bson projectionFields = Projections.fields(
                 Projections.excludeId());
-        try (MongoCursor<Document> cursor = collection.find(Filters.eq("tipo", tipo))
+        try (MongoCursor<Document> cursor = collection.find(Filters.eq(variable, valor))
                 .projection(projectionFields)
                 .sort(Sorts.descending("tipo")).iterator()) {
             while (cursor.hasNext()) {
                 System.out.println(cursor.next().toJson());
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+
 
     private static void modArticulo() {
         MongoClient mongoClient = MongoDB.getClient();
@@ -85,6 +101,10 @@ public class AlmacenApp {
 
         // Dividir la entrada del usuario en nombre de variable y valor
         String[] parts = userInput.split(":");
+        if (parts.length < 2) {
+            IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
+            return;
+        }
         String variable = parts[0].trim();
         String valor = parts[1].trim().toString();
 
@@ -94,9 +114,8 @@ public class AlmacenApp {
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
 
-        if(!cursor.hasNext()){
+        if (!cursor.hasNext()) {
             IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
-            mongoClient.close();
             return;
         }
 
@@ -145,20 +164,21 @@ public class AlmacenApp {
                 }
             }
 
-            // Actualizar el documento en la base de datos
+            // Actualizar el documento en la base de datos usando el _id original
             collection.replaceOne(Filters.eq("_id", articuloSeleccionado.getObjectId("_id")), articuloSeleccionado);
-            mongoClient.close();
             IO.println("Artículo modificado con éxito.");
         } else {
             IO.println("Opción no válida.");
         }
     }
 
+
     private static void addArticulo() {
         MongoClient mongoClient = MongoDB.getClient();
         MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
-
+        IO.print("¿Qué opcion de artículo quieres modificar?");
+        String opcion = IO.readString();
         // Solicitar al usuario la información básica del nuevo artículo
         IO.print("Ingrese el tipo del artículo: ");
         String tipo = IO.readString();
