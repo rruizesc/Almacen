@@ -8,6 +8,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import main.java.org.example.io.IO;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -27,8 +28,9 @@ public class AlmacenApp {
                 "1.Buscar Articulo",
                 "2.Modificar",
                 "3.Añadir",
-                "4.Eliminar",
-                "5.Salir"
+                "4.Eliminar Articulo",
+                "5.Eliminar variable",
+                "6.Salir"
         );
 
         while (true) {
@@ -47,6 +49,9 @@ public class AlmacenApp {
                     deleteArticulo();
                     break;
                 case "5":
+                    deleteVariable();
+                    break;
+                case "6":
                     System.out.println("Saliendo de la aplicación");
                     return;
                 default:
@@ -287,6 +292,75 @@ public class AlmacenApp {
             System.out.println();
         }
     }
+    private static void deleteVariable() {
+        MongoClient mongoClient = MongoDB.getClient();
+        MongoDatabase database = mongoClient.getDatabase("almacen");
+        MongoCollection<Document> collection = database.getCollection("articulos");
+
+        IO.print("Indica que opción quieres eliminar");
+        String campoEliminar = IO.readString();
+
+        Bson filter = Filters.exists(campoEliminar);
+
+        MongoCursor<Document> cursor = collection.find(filter)
+                .sort(Sorts.descending("tipo")).iterator();
+
+        if (!cursor.hasNext()) {
+            IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
+            return;
+        }
+
+        // Almacenar los artículos en una lista
+        List<Document> articulos = new ArrayList<>();
+        int opcionArticulo = 1;
+
+        try {
+            while (cursor.hasNext()) {
+                Document articulo = cursor.next();
+                IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
+
+                System.out.println();  // Salto de línea después de mostrar los detalles
+                opcionArticulo++;
+
+                // Almacenar el artículo en la lista
+                articulos.add(articulo);
+            }
+        } finally {
+            cursor.close();
+        }
+
+        // Solicitar al usuario que elija un artículo para eliminar el campo
+        int opcionEliminar = -1;
+        while (opcionEliminar < 1 || opcionEliminar > opcionArticulo - 1) {
+            IO.print("Seleccione el número del artículo que desea eliminar el campo (1-" + (opcionArticulo - 1) + "): ");
+            opcionEliminar = IO.readInt();
+        }
+
+        // Obtener el artículo seleccionado
+        Document articuloEliminarCampo = articulos.get(opcionEliminar - 1);
+
+        // Eliminar el campo del artículo seleccionado
+        articuloEliminarCampo.remove(campoEliminar);
+
+        // Obtener el _id del artículo seleccionado
+        ObjectId idArticuloEliminarCampo = articuloEliminarCampo.getObjectId("_id");
+
+        // Construir el filtro para actualizar el artículo
+        Bson filtroEliminarCampo = Filters.eq("_id", idArticuloEliminarCampo);
+
+        // Actualizar el artículo en la base de datos para eliminar el campo
+        UpdateResult updateResult = collection.updateOne(filtroEliminarCampo, new Document("$unset", new Document(campoEliminar, "")));
+
+        // Verificar si se eliminó el campo con éxito
+        if (updateResult.getModifiedCount() > 0) {
+            IO.print("Campo eliminado con éxito.");
+            System.out.println();
+        } else {
+            IO.print("No se pudo eliminar el campo. Verifique la existencia del artículo o inténtelo nuevamente.");
+            System.out.println();
+        }
+    }
+
 }
 
 
