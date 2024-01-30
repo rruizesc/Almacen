@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 public class AlmacenApp {
+    static MongoClient mongoClient = MongoDB.getClient();
+    static MongoDatabase database = mongoClient.getDatabase("almacen");
+    static MongoCollection<Document> collection = database.getCollection("articulos");
 
     public static void main(String[] args) {
 
@@ -28,9 +31,10 @@ public class AlmacenApp {
                 "1.Buscar Articulo",
                 "2.Modificar",
                 "3.Añadir",
-                "4.Eliminar Articulo",
-                "5.Eliminar variable",
-                "6.Salir"
+                "4.Añadir variable",
+                "5.Eliminar Articulo",
+                "6.Eliminar variable",
+                "7.Salir"
         );
 
         while (true) {
@@ -46,26 +50,32 @@ public class AlmacenApp {
                     addArticulo();
                     break;
                 case "4":
-                    deleteArticulo();
+                    addVariable();
                     break;
                 case "5":
-                    deleteVariable();
+                    deleteArticulo();
                     break;
                 case "6":
+                    deleteVariable();
+                    break;
+                case "7":
                     System.out.println("Saliendo de la aplicación");
                     return;
                 default:
                     System.out.println("Opción no válida");
                     break;
-
             }
         }
     }
 
+    /*
+    Función para buscar un objeto en la base de datos, teniendo que especificar
+    el tipo de variable y su valor para listar x objetos en la base de datos
+    que coincida con la condición de búsqueda.
+     */
     private static void buscarArticulo() {
-        MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("almacen");
-        MongoCollection<Document> collection = database.getCollection("articulos");
+        //Declaración de la conexión, colección y de la base de datos
+
 
         IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
         String userInput = IO.readString();
@@ -97,10 +107,6 @@ public class AlmacenApp {
 
 
     private static void modArticulo() {
-        MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("almacen");
-        MongoCollection<Document> collection = database.getCollection("articulos");
-
         IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
         String userInput = IO.readString();
 
@@ -160,12 +166,15 @@ public class AlmacenApp {
 
             // Iterar sobre las variables y permitir al usuario modificar cada una
             for (Map.Entry<String, Object> entry : articuloSeleccionado.entrySet()) {
-                IO.print("Introduce el nuevo valor para '" + entry.getKey() + "' (o deja en blanco para mantener el valor actual): ");
-                String nuevoValor = IO.readString();
+                // No permitir modificar la ID
+                if (!entry.getKey().equals("_id")) {
+                    IO.print("Introduce el nuevo valor para '" + entry.getKey() + "' (o deja en blanco para mantener el valor actual): ");
+                    String nuevoValor = IO.readString();
 
-                if (!nuevoValor.isEmpty()) {
-                    // Actualizar el valor en el documento
-                    articuloSeleccionado.put(entry.getKey(), nuevoValor);
+                    if (!nuevoValor.isEmpty()) {
+                        // Actualizar el valor en el documento
+                        articuloSeleccionado.put(entry.getKey(), nuevoValor);
+                    }
                 }
             }
 
@@ -177,14 +186,11 @@ public class AlmacenApp {
         }
     }
 
-
     private static void addArticulo() {
-        MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("almacen");
-        MongoCollection<Document> collection = database.getCollection("articulos");
+
         IO.print("¿Qué opcion de artículo quieres modificar?");
         // Solicitar al usuario la información básica del nuevo artículo
-        IO.print("Ingrese el tipo del artículo: ");
+        IO.println("Ingrese el tipo del artículo: ");
         String tipo = IO.readString().toLowerCase();
 
         IO.print("Ingrese la marca del artículo: ");
@@ -236,20 +242,30 @@ public class AlmacenApp {
         return input.matches("[0-9]+");
     }
 
+    private static void addVariable() {
 
-    private static void deleteArticulo() {
-        MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("almacen");
-        MongoCollection<Document> collection = database.getCollection("articulos");
+        IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
+        String userInput = IO.readString();
 
-        IO.print("¿Qué tipo de artículo quieres eliminar?");
-        String tipo = IO.readString();
+        // Dividir la entrada del usuario en nombre de variable y valor
+        String[] parts = userInput.split(":");
+        if (parts.length < 2) {
+            IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
+            return;
+        }
+        String variable = parts[0].trim().toLowerCase();
+        String valor = parts[1].trim().toLowerCase();
 
-        // Obtener los artículos del tipo seleccionado
-        Bson filter = Filters.eq("tipo", tipo);
+        // Crear un filtro dinámico
+        Bson filter = Filters.eq(variable, valor);
 
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
+
+        if (!cursor.hasNext()) {
+            IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
+            return;
+        }
 
         // Almacenar los artículos en una lista
         List<Document> articulos = new ArrayList<>();
@@ -258,11 +274,78 @@ public class AlmacenApp {
         try {
             while (cursor.hasNext()) {
                 Document articulo = cursor.next();
-                IO.print("Opción " + opcionArticulo + ": ");
-                // Mostrar los detalles del artículo directamente aquí
-                for (Map.Entry<String, Object> entry : articulo.entrySet()) {
-                    IO.print(entry.getKey() + ": " + entry.getValue() + " | ");
-                }
+                IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
+
+                System.out.println();  // Salto de línea después de mostrar los detalles
+                opcionArticulo++;
+
+                // Almacenar el artículo en la lista
+                articulos.add(articulo);
+            }
+        } finally {
+            cursor.close();
+        }
+
+        IO.println("Seleccione el artículo que desea modificar ingresando el número correspondiente:");
+        int opcionSeleccionada = IO.readInt();
+
+        // Validar la opción seleccionada
+        if (opcionSeleccionada >= 1 && opcionSeleccionada <= opcionArticulo - 1) {
+            // Obtener el artículo seleccionado de la lista
+            Document articuloSeleccionado = articulos.get(opcionSeleccionada - 1);
+
+            // Solicitar al usuario el nombre y valor de la nueva variable
+            IO.print("Introduce el nombre de la nueva variable: ");
+            String nuevoNombreVariable = IO.readString().trim().toLowerCase();
+
+            IO.print("Introduce el valor de la nueva variable: ");
+            String nuevoValorVariable = IO.readString();
+
+            // Agregar la nueva variable al documento
+            articuloSeleccionado.put(nuevoNombreVariable, nuevoValorVariable);
+
+            // Actualizar el documento en la base de datos usando el _id original
+            collection.replaceOne(Filters.eq("_id", articuloSeleccionado.getObjectId("_id")), articuloSeleccionado);
+            IO.println("Artículo modificado con éxito.");
+        } else {
+            IO.println("Opción no válida.");
+        }
+    }
+
+    private static void deleteArticulo() {
+
+        IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
+        String userInput = IO.readString();
+
+        // Dividir la entrada del usuario en nombre de variable y valor
+        String[] parts = userInput.split(":");
+        if (parts.length < 2) {
+            IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
+            return;
+        }
+        String variable = parts[0].trim().toLowerCase();
+        String valor = parts[1].trim().toLowerCase();
+
+        // Crear un filtro dinámico
+        Bson filter = Filters.eq(variable, valor);
+
+        MongoCursor<Document> cursor = collection.find(filter)
+                .sort(Sorts.descending("tipo")).iterator();
+
+        if (!cursor.hasNext()) {
+            IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
+            return;
+        }
+
+        // Almacenar los artículos en una lista
+        List<Document> articulos = new ArrayList<>();
+        int opcionArticulo = 1;
+
+        try {
+            while (cursor.hasNext()) {
+                Document articulo = cursor.next();
+                IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
+
                 System.out.println();  // Salto de línea después de mostrar los detalles
                 opcionArticulo++;
 
@@ -301,14 +384,21 @@ public class AlmacenApp {
         }
     }
     private static void deleteVariable() {
-        MongoClient mongoClient = MongoDB.getClient();
-        MongoDatabase database = mongoClient.getDatabase("almacen");
-        MongoCollection<Document> collection = database.getCollection("articulos");
 
-        IO.print("Indica que opción quieres eliminar");
-        String campoEliminar = IO.readString();
+        IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
+        String userInput = IO.readString();
 
-        Bson filter = Filters.exists(campoEliminar);
+        // Dividir la entrada del usuario en nombre de variable y valor
+        String[] parts = userInput.split(":");
+        if (parts.length < 2) {
+            IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
+            return;
+        }
+        String variable = parts[0].trim().toLowerCase();
+        String valor = parts[1].trim().toLowerCase();
+
+        // Crear un filtro dinámico
+        Bson filter = Filters.eq(variable, valor);
 
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
@@ -347,6 +437,8 @@ public class AlmacenApp {
         // Obtener el artículo seleccionado
         Document articuloEliminarCampo = articulos.get(opcionEliminar - 1);
 
+        IO.print("Indica que opción quieres eliminar");
+        String campoEliminar = IO.readString();
         // Eliminar el campo del artículo seleccionado
         articuloEliminarCampo.remove(campoEliminar);
 
