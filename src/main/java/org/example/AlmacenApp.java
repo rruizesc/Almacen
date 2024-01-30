@@ -79,8 +79,8 @@ public class AlmacenApp {
             return;
         }
 
-        String variable = parts[0].trim();
-        String valor = parts[1].trim().toString();
+        String variable = parts[0].trim().toLowerCase();
+        String valor = parts[1].trim().toLowerCase();
 
         Bson projectionFields = Projections.fields(
                 Projections.excludeId());
@@ -110,8 +110,8 @@ public class AlmacenApp {
             IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
             return;
         }
-        String variable = parts[0].trim();
-        String valor = parts[1].trim().toString();
+        String variable = parts[0].trim().toLowerCase();
+        String valor = parts[1].trim().toLowerCase();
 
         // Crear un filtro dinámico
         Bson filter = Filters.eq(variable, valor);
@@ -183,16 +183,21 @@ public class AlmacenApp {
         MongoDatabase database = mongoClient.getDatabase("almacen");
         MongoCollection<Document> collection = database.getCollection("articulos");
         IO.print("¿Qué opcion de artículo quieres modificar?");
-        String opcion = IO.readString();
         // Solicitar al usuario la información básica del nuevo artículo
         IO.print("Ingrese el tipo del artículo: ");
-        String tipo = IO.readString();
+        String tipo = IO.readString().toLowerCase();
 
         IO.print("Ingrese la marca del artículo: ");
-        String marca = IO.readString();
+        String marca = IO.readString().toLowerCase();
 
         IO.print("Ingrese la cantidad del artículo: ");
-        int cantidad = IO.readInt();
+        String cantidad ;
+        do {
+            cantidad = IO.readString();
+            if (!esNumeroEntre0y9(cantidad)) {
+                IO.print("La cantidad ingresada no es válida, ingrese una cantidad alfanumérica: ");
+            }
+        } while (!esNumeroEntre0y9(cantidad));
 
         // Crear un documento con la información básica proporcionada por el usuario
         Document nuevoArticulo = new Document()
@@ -226,6 +231,9 @@ public class AlmacenApp {
         collection.insertOne(nuevoArticulo);
 
         System.out.println("Artículo agregado correctamente.");
+    }
+    private static boolean esNumeroEntre0y9(String input) {
+        return input.matches("[0-9]+");
     }
 
 
