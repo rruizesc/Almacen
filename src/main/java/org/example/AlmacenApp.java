@@ -19,12 +19,16 @@ import java.util.List;
 import java.util.Map;
 
 public class AlmacenApp {
+    /*
+    Declaración de la conexión, colección y de la base de datos de manera global
+    para que pueda acceder a la conexión desde los métodos solo declarandolo una vez.
+     */
     static MongoClient mongoClient = MongoDB.getClient();
     static MongoDatabase database = mongoClient.getDatabase("almacen");
     static MongoCollection<Document> collection = database.getCollection("articulos");
 
     public static void main(String[] args) {
-
+        //El menú para poder realizar diferentes acciones con la BBDD.
         IO.println("Bienvenido al gestor del almacén");
         IO.println("?Qué quieres hacer?");
         List<String> option = List.of(
@@ -59,7 +63,9 @@ public class AlmacenApp {
                     deleteVariable();
                     break;
                 case "7":
+                    //Cierra la aplicación y la caonexión con la BBDD.
                     System.out.println("Saliendo de la aplicación");
+                    mongoClient.close();
                     return;
                 default:
                     System.out.println("Opción no válida");
@@ -69,13 +75,11 @@ public class AlmacenApp {
     }
 
     /*
-    Función para buscar un objeto en la base de datos, teniendo que especificar
-    el tipo de variable y su valor para listar x objetos en la base de datos
-    que coincida con la condición de búsqueda.
+    Realiza una búsqueda en la base de datos MongoDB según los
+     parámetros proporcionados por el usuario. Excluye el ID del
+      objeto y muestra los resultados en formato JSON.
      */
     private static void buscarArticulo() {
-        //Declaración de la conexión, colección y de la base de datos
-
 
         IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
         String userInput = IO.readString();
@@ -88,12 +92,14 @@ public class AlmacenApp {
             IO.println("Entrada inválida. Debes proporcionar pares de nombre de variable y valor.");
             return;
         }
-
+        //Guardando los parámetros para usarlos más cómodamente.
         String variable = parts[0].trim().toLowerCase();
         String valor = parts[1].trim().toLowerCase();
-
+        //Excluir el id del objeto
         Bson projectionFields = Projections.fields(
                 Projections.excludeId());
+        //Realizar la busqueda en la base de datos, filtrando con los paramentros
+        //que se han pasado previamente por terminal, excluyendo el id e imprimirlo de manera descente en formato json.
         try (MongoCursor<Document> cursor = collection.find(Filters.eq(variable, valor))
                 .projection(projectionFields)
                 .sort(Sorts.descending("tipo")).iterator()) {
@@ -105,13 +111,18 @@ public class AlmacenApp {
         }
     }
 
-
+    /*
+    Permite al usuario buscar y modificar un artículo de la base de datos.
+    Muestra opciones, permite al usuario elegir un artículo, muestra sus detalles
+    y solicita la modificación de variables específicas.
+     */
     private static void modArticulo() {
         IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
         String userInput = IO.readString();
 
         // Dividir la entrada del usuario en nombre de variable y valor
         String[] parts = userInput.split(":");
+        // Comprobamos de que userInput tenga unos valores válidos.
         if (parts.length < 2) {
             IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
             return;
@@ -122,9 +133,11 @@ public class AlmacenApp {
         // Crear un filtro dinámico
         Bson filter = Filters.eq(variable, valor);
 
+        //Llenamos el array con la colleción que cumple con el filtro
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
 
+        //Comprobamos de que el array no esta vacío.
         if (!cursor.hasNext()) {
             IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
             return;
@@ -137,6 +150,7 @@ public class AlmacenApp {
         try {
             while (cursor.hasNext()) {
                 Document articulo = cursor.next();
+                //Imprimimos el array detrás de un int que es la opción que nos ayudara a elegir que objeto queremos modificar.
                 IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
 
                 System.out.println();  // Salto de línea después de mostrar los detalles
@@ -186,6 +200,11 @@ public class AlmacenApp {
         }
     }
 
+    /*
+    Agrega un nuevo artículo a la base de datos solicitando información básica
+    al usuario, como tipo, marca y cantidad. Opcionalmente, permite agregar más
+    opciones al artículo.
+     */
     private static void addArticulo() {
 
         IO.print("¿Qué opcion de artículo quieres modificar?");
@@ -238,17 +257,27 @@ public class AlmacenApp {
 
         System.out.println("Artículo agregado correctamente.");
     }
+
+    /*
+    Función auxiliar que verifica si una cadena es un número entre 0 y 9.
+     */
     private static boolean esNumeroEntre0y9(String input) {
         return input.matches("[0-9]+");
     }
 
+    /*
+     Permite al usuario agregar una nueva variable a un artículo existente en
+     la base de datos. Solicita información sobre la variable y su valor, luego
+     actualiza el artículo en la base de datos.
+     */
     private static void addVariable() {
 
-        IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
+        IO.print("¿Por qué opción quieres buscar? (nombreVariable:valor)");
         String userInput = IO.readString();
 
         // Dividir la entrada del usuario en nombre de variable y valor
         String[] parts = userInput.split(":");
+        // Comprobamos de que userInput tenga unos valores válidos.
         if (parts.length < 2) {
             IO.println("Entrada inválida. Debes proporcionar tanto el nombre de la variable como el valor.");
             return;
@@ -259,9 +288,11 @@ public class AlmacenApp {
         // Crear un filtro dinámico
         Bson filter = Filters.eq(variable, valor);
 
+        //Llenamos el array con la colleción que cumple con el filtro
         MongoCursor<Document> cursor = collection.find(filter)
                 .sort(Sorts.descending("tipo")).iterator();
 
+        //Comprobamos de que el array no esta vacío.
         if (!cursor.hasNext()) {
             IO.println("No se encontraron artículos con la variable especificada. Verifica la variable y el valor e intenta nuevamente.");
             return;
@@ -274,6 +305,7 @@ public class AlmacenApp {
         try {
             while (cursor.hasNext()) {
                 Document articulo = cursor.next();
+                //Imprimimos el array detrás de un int que es la opción que nos ayudara a elegir que objeto queremos modificar.
                 IO.print("Opción " + opcionArticulo + ": " + articulo.toJson());
 
                 System.out.println();  // Salto de línea después de mostrar los detalles
@@ -312,6 +344,11 @@ public class AlmacenApp {
         }
     }
 
+    /*
+    Permite al usuario buscar y eliminar un artículo de la base de datos según
+    los parámetros proporcionados. Muestra opciones, permite al usuario elegir un
+    artículo y elimina el artículo seleccionado.
+     */
     private static void deleteArticulo() {
 
         IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
@@ -383,6 +420,12 @@ public class AlmacenApp {
             System.out.println();
         }
     }
+
+    /*
+    Permite al usuario buscar y eliminar una variable de un artículo existente en
+    la base de datos. Muestra opciones, permite al usuario elegir un artículo y una
+    variable, luego elimina la variable del artículo en la base de datos.
+     */
     private static void deleteVariable() {
 
         IO.print("¿Por qué variable quieres buscar? (nombreVariable:valor)");
@@ -460,7 +503,6 @@ public class AlmacenApp {
             System.out.println();
         }
     }
-
 }
 
 
